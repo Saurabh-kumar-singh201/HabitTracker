@@ -22,9 +22,27 @@ const dbConfig = {
 };
 const singletonId = 'habit-tracker-state';
 
+function isOriginAllowed(requestOrigin) {
+  if (!requestOrigin) return false;
+
+  return allowedOrigins.some(allowedOrigin => {
+    if (allowedOrigin === requestOrigin) return true;
+
+    // Support simple wildcard patterns such as https://*.vercel.app
+    if (allowedOrigin.includes('*')) {
+      const pattern = '^' + allowedOrigin
+        .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/\*/g, '.*') + '$';
+      return new RegExp(pattern).test(requestOrigin);
+    }
+
+    return false;
+  });
+}
+
 app.use((req, res, next) => {
   const requestOrigin = req.headers.origin;
-  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+  if (isOriginAllowed(requestOrigin)) {
     res.setHeader('Access-Control-Allow-Origin', requestOrigin);
     res.setHeader('Vary', 'Origin');
   }
