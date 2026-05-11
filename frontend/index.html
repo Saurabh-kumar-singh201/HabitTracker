@@ -1389,37 +1389,6 @@ const MOTIVATIONS = {
   empty: ["Start small. Pick one habit today.", "The best time to start is now.", "Your journey begins with a single step."]
 };
 
-const SAMPLE_HABITS = [
-  { id:'s1', name:'Morning Meditation', category:'Mind', color:'#9b8ec4', emoji:'🧘' },
-  { id:'s2', name:'Exercise 30min', category:'Health', color:'#e07a5f', emoji:'💪' },
-  { id:'s3', name:'Read 20 pages', category:'Mind', color:'#e8a849', emoji:'📖' },
-  { id:'s4', name:'Drink 8 glasses', category:'Health', color:'#6ba3be', emoji:'💧' },
-  { id:'s5', name:'Journal', category:'Creative', color:'#d4687a', emoji:'✍️' },
-  { id:'s6', name:'No social media before noon', category:'Mind', color:'#8aab6e', emoji:'🎯' },
-  { id:'s7', name:'Practice guitar', category:'Creative', color:'#c49bde', emoji:'🎵' },
-  { id:'s8', name:'Walk outside', category:'Health', color:'#a8c47a', emoji:'🚶' },
-];
-
-function generateSampleRecords(habitIds) {
-  const records = {};
-  const today = new Date();
-  for (let d = 30; d >= 1; d--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - d);
-    const key = dk(date);
-    records[key] = {};
-    habitIds.forEach(id => {
-      const r = Math.random();
-      if (r < 0.65) {
-        records[key][id] = { status:'done', effort: Math.ceil(Math.random()*3)+2, note: ['Felt great','Tired but pushed through','Easy win','Needed effort','Flow state'][Math.floor(Math.random()*5)] };
-      } else if (r < 0.8) {
-        records[key][id] = { status:'skipped', effort:0, note:'' };
-      }
-    });
-  }
-  return records;
-}
-
 function loadData() {
   try {
     const habits = JSON.parse(localStorage.getItem(STORAGE_KEY));
