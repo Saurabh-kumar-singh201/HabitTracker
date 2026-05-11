@@ -1426,10 +1426,7 @@ function loadData() {
     const records = JSON.parse(localStorage.getItem(RECORDS_KEY));
     if (habits && habits.length > 0) return { habits, records: records || {} };
   } catch(e) {}
-  const habits = SAMPLE_HABITS;
-  const records = generateSampleRecords(SAMPLE_HABITS.map(h => h.id));
-  saveData(habits, records);
-  return { habits, records };
+  return { habits: [], records: {} };
 }
 
 function saveData(habits, records) {
