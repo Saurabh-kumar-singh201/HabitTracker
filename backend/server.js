@@ -41,6 +41,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '1mb' }));
 
 let pool;
+let schemaReady;
 
 async function getPool() {
   if (!dbConfig.host || !dbConfig.user) return null;
@@ -50,8 +51,18 @@ async function getPool() {
   return pool;
 }
 
+async function getSchemaReady() {
+  if (!schemaReady) {
+    schemaReady = ensureSchema().catch(error => {
+      schemaReady = null;
+      throw error;
+    });
+  }
+  return schemaReady;
+}
+
 async function readState() {
-  const dbPool = await getPool();
+  const dbPool = await getSchemaReady();
   if (!dbPool) return null;
   try {
     const [rows] = await dbPool.query('SELECT habits_json, records_json, theme FROM app_state WHERE state_id = ? LIMIT 1', [singletonId]);
@@ -104,7 +115,7 @@ async function ensureSchema() {
 }
 
 async function upsertState({ habits, records, theme }) {
-  const dbPool = await ensureSchema();
+  const dbPool = await getSchemaReady();
   if (!dbPool) return null;
   try {
     const habitJson = JSON.stringify(habits || []);
@@ -176,7 +187,7 @@ app.delete('/api/state', async (_req, res) => {
   try {
     const dbPool = await getPool();
     if (!dbPool) return res.status(503).json({ error: 'MySQL is not configured' });
-    await ensureSchema();
+    await getSchemaReady();
     await dbPool.query('DELETE FROM app_state WHERE state_id = ?', [singletonId]);
     res.json({ ok: true });
   } catch (error) {
@@ -186,7 +197,7 @@ app.delete('/api/state', async (_req, res) => {
 
 app.get('/health', async (_req, res) => {
   try {
-    const dbPool = await getPool();
+    const dbPool = await getSchemaReady();
     if (!dbPool) {
       return res.json({ ok: true, database: 'not-configured' });
     }
@@ -204,3 +215,11 @@ app.get('/', (_req, res) => {
 app.listen(port, () => {
   console.log(`Habit Tracker API listening on http://localhost:${port}`);
 });
+
+getSchemaReady()
+  .then(() => {
+    console.log('Database schema is ready');
+  })
+  .catch(error => {
+    console.error('[startup] Failed to initialize database schema:', error.message);
+  });
