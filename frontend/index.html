@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="api-base-url" content="">
 <title>Ember — Habit Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1366,7 +1367,13 @@ input, textarea, select {
 const STORAGE_KEY = 'ember_habits';
 const RECORDS_KEY = 'ember_records';
 const THEME_KEY = 'ember_theme';
-const API_STATE_URL = '/api/state';
+const API_BASE_URL = (
+  document.querySelector('meta[name="api-base-url"]')?.content?.trim() ||
+  ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? window.location.origin
+    : '')
+).replace(/\/$/, '');
+const API_STATE_URL = `${API_BASE_URL}/api/state`;
 
 const CATEGORIES = ['Health','Work','Mind','Creative','Social','Other'];
 const CATEGORY_ICONS = { Health:'🫀', Work:'💼', Mind:'🧠', Creative:'🎨', Social:'👥', Other:'✨' };
