@@ -1370,8 +1370,8 @@ const THEME_KEY = 'ember_theme';
 const API_BASE_URL = (
   document.querySelector('meta[name="api-base-url"]')?.content?.trim() ||
   ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? window.location.origin
-    : '')
+    ? window.location.origin 
+    : 'https://habittracker-dpt4.onrender.com')
 ).replace(/\/$/, '');
 const API_STATE_URL = `${API_BASE_URL}/api/state`;
 
