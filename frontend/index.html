@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="api-base-url" content="">
+<meta name="api-base-url" content="https://habittracker-dpt4.onrender.com">
 <title>Ember — Habit Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2061,7 +2061,8 @@ document.getElementById('settingsBtn').addEventListener('click', async () => {
     }
     alert('All data has been reset locally and on the server.');
   } catch (err) {
-    alert('Reset completed locally, but failed to contact server to clear remote data.');
+    const message = err && err.message ? err.message : 'Unknown network error';
+    alert('Reset completed locally, but failed to contact server to clear remote data.\n\nAPI URL: ' + API_STATE_URL + '\nError: ' + message);
   }
 });
 
