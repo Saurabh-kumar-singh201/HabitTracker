@@ -124,6 +124,20 @@ body {
   transition: background var(--transition-normal), color var(--transition-normal);
 }
 
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -2;
+  transition: opacity var(--transition-slow), transform var(--transition-slow), background var(--transition-slow);
+}
+
+body::after {
+  z-index: -1;
+}
+
 button {
   font-family: inherit;
   cursor: pointer;
@@ -146,6 +160,7 @@ input, textarea, select {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  position: relative;
 }
 
 .topbar {
@@ -217,9 +232,36 @@ input, textarea, select {
 
 .topbar-actions {
   display: flex;
-  gap: 4px;
+  gap: 8px;
   align-items: center;
   flex-shrink: 0;
+}
+
+.style-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-tertiary);
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+}
+
+.style-mode-btn {
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.style-mode-btn.active {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .btn-icon {
@@ -289,7 +331,7 @@ input, textarea, select {
 
 /* Sidebar */
 .sidebar {
-  width: 260px;
+  width: 360px;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-subtle);
   display: flex;
@@ -342,72 +384,107 @@ input, textarea, select {
 .habit-list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 8px 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .habit-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
-  border-radius: var(--radius-md);
+  gap: 16px;
+  padding: 16px 20px;
+  min-height: 82px;
+  border-radius: 0;
   cursor: pointer;
   transition: all var(--transition-fast);
   position: relative;
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  background: transparent;
 }
 
-.habit-item:hover { background: var(--bg-tertiary); }
+.habit-item:hover {
+  background: var(--bg-tertiary);
+  transform: none;
+}
 
-.habit-item.selected { background: var(--bg-elevated); }
+.habit-item.selected {
+  background: var(--bg-elevated);
+  box-shadow: inset 3px 0 0 var(--accent-amber);
+}
 
 .habit-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: 4px;
+  height: 100%;
+  min-height: 50px;
+  border-radius: 999px;
   flex-shrink: 0;
 }
 
 .habit-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .habit-name {
-  font-size: 0.82rem;
-  font-weight: 500;
+  font-size: 0.98rem;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .habit-category {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
+}
+
+.habit-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  padding-left: 16px;
 }
 
 .habit-streak-badge {
   font-family: var(--font-mono);
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--accent-amber);
   white-space: nowrap;
+  padding: 0;
+  border-radius: 999px;
+  background: transparent;
+  border: none;
 }
 
 .habit-item .btn-delete {
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
+  position: static;
   opacity: 0;
   transition: opacity var(--transition-fast);
   color: var(--text-muted);
-  font-size: 0.85rem;
-  padding: 4px;
+  font-size: 0.9rem;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .habit-item:hover .btn-delete { opacity: 1; }
-.habit-item .btn-delete:hover { color: var(--accent-coral); }
+.habit-item .btn-delete:hover {
+  color: var(--accent-coral);
+  background: var(--bg-hover);
+}
 
 /* Content area */
 .content {
@@ -415,6 +492,614 @@ input, textarea, select {
   overflow-y: auto;
   padding: 24px;
   transition: background var(--transition-normal);
+}
+
+.day-shell {
+  display: grid;
+  gap: 24px;
+}
+
+.day-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  padding: 28px;
+  border: 1px solid var(--border-medium);
+}
+
+.day-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(260px, 0.9fr);
+  gap: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-main,
+.hero-side,
+.review-card {
+  border-radius: 22px;
+}
+
+.hero-main {
+  padding: 24px;
+}
+
+.hero-kicker,
+.panel-label,
+.review-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hero-title {
+  font-size: clamp(2.1rem, 4vw, 3.75rem);
+  line-height: 0.98;
+  letter-spacing: -0.06em;
+  max-width: 11ch;
+  margin: 14px 0 12px;
+}
+
+.hero-copy {
+  max-width: 54ch;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.hero-button {
+  padding: 11px 16px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  transition: transform var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+.hero-button:hover {
+  transform: translateY(-1px);
+}
+
+.hero-button.primary {
+  background: var(--accent-coral);
+  color: #fff8f2;
+}
+
+.hero-button.secondary {
+  background: transparent;
+}
+
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.hero-stat {
+  padding: 14px;
+  border-radius: 18px;
+}
+
+.hero-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.hero-stat-label {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hero-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.focus-card,
+.review-card {
+  padding: 18px 20px;
+}
+
+.focus-card {
+  flex: 1;
+}
+
+.focus-title {
+  font-size: 1.35rem;
+  margin: 10px 0 6px;
+}
+
+.focus-copy,
+.review-copy {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.focus-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.meta-pill {
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.review-card h3 {
+  margin: 10px 0 6px;
+  font-size: 1rem;
+}
+
+.review-card strong {
+  display: block;
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.section-title-row h2 {
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  font-weight: 400;
+}
+
+.section-title-row p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+[data-style-mode="studio"] body {
+  background:
+    linear-gradient(124deg, #56afe3 0 28%, #f3caa4 28% 54%, #f59a7d 54% 76%, #cce7cf 76% 100%);
+}
+
+[data-style-mode="studio"] body::before {
+  inset: 32px;
+  border: 2px solid #243128;
+  background:
+    linear-gradient(180deg, rgba(245, 239, 218, 0.92), rgba(245, 239, 218, 0.92));
+  box-shadow: 0 0 0 3px rgba(255, 252, 240, 0.55);
+}
+
+[data-style-mode="studio"] body::after {
+  background:
+    linear-gradient(90deg, transparent 0 84%, rgba(36, 49, 40, 0.08) 84% 86%, transparent 86%),
+    linear-gradient(180deg, transparent 0 78%, rgba(36, 49, 40, 0.08) 78% 80%, transparent 80%);
+  opacity: 0.8;
+}
+
+[data-style-mode="studio"] .app {
+  max-width: 1360px;
+  margin: 24px auto;
+  min-height: calc(100vh - 48px);
+  border: 2px solid #243128;
+  background: #f5efda;
+  box-shadow: 8px 8px 0 rgba(36, 49, 40, 0.18);
+}
+
+[data-style-mode="studio"] .topbar,
+[data-style-mode="studio"] .sidebar,
+[data-style-mode="studio"] .checkin-card,
+[data-style-mode="studio"] .week-grid-header,
+[data-style-mode="studio"] .week-grid-label,
+[data-style-mode="studio"] .cal-header,
+[data-style-mode="studio"] .stat-card,
+[data-style-mode="studio"] .modal,
+[data-style-mode="studio"] .day-hero,
+[data-style-mode="studio"] .hero-main,
+[data-style-mode="studio"] .focus-card,
+[data-style-mode="studio"] .review-card {
+  border: 2px solid #1f2922;
+  box-shadow: 5px 5px 0 rgba(31, 41, 34, 0.16);
+}
+
+[data-style-mode="studio"] .topbar,
+[data-style-mode="studio"] .sidebar,
+[data-style-mode="studio"] .content,
+[data-style-mode="studio"] .week-grid-header,
+[data-style-mode="studio"] .week-grid-label,
+[data-style-mode="studio"] .cal-header {
+  background: #f5efda;
+}
+
+[data-style-mode="studio"] .logo,
+[data-style-mode="studio"] .btn-add-habit,
+[data-style-mode="studio"] .hero-button.primary {
+  background: #f2c94c;
+  color: #1b1b1b;
+}
+
+[data-style-mode="studio"] .topbar-brand h1,
+[data-style-mode="studio"] .day-date,
+[data-style-mode="studio"] .section-title-row h2,
+[data-style-mode="studio"] .hero-title {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+[data-style-mode="studio"] .day-hero {
+  background: #f8f2df;
+}
+
+[data-style-mode="studio"] .day-hero::before {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  border: 2px solid rgba(31, 41, 34, 0.18);
+  pointer-events: none;
+}
+
+[data-style-mode="studio"] .hero-main {
+  background: #f5c84b;
+}
+
+[data-style-mode="studio"] .hero-side {
+  gap: 16px;
+}
+
+[data-style-mode="studio"] .focus-card {
+  background: #fffaf0;
+}
+
+[data-style-mode="studio"] .review-card:nth-child(1) {
+  background: #f2c7f0;
+}
+
+[data-style-mode="studio"] .review-card:nth-child(2) {
+  background: #f8f1db;
+}
+
+[data-style-mode="studio"] .review-card:nth-child(3) {
+  background: #d8efe6;
+}
+
+[data-style-mode="studio"] .hero-stat,
+[data-style-mode="studio"] .meta-pill,
+[data-style-mode="studio"] .style-mode-btn.active,
+[data-style-mode="studio"] .theme-toggle,
+[data-style-mode="studio"] .view-tab.active {
+  background: #fffaf0;
+  border: 2px solid #1f2922;
+}
+
+[data-style-mode="studio"] .hero-button.secondary {
+  border: 2px solid #1f2922;
+  background: #fffaf0;
+}
+
+[data-style-mode="studio"] .habit-item.selected,
+[data-style-mode="studio"] .habit-item:hover,
+[data-style-mode="studio"] .week-grid-cell:hover,
+[data-style-mode="studio"] .cal-day:hover {
+  background: rgba(242, 201, 76, 0.18);
+}
+
+[data-style-mode="studio"] .style-mode-toggle {
+  border: 2px solid #1f2922;
+  background: #fffaf0;
+}
+
+[data-style-mode="calm"] body {
+  background: linear-gradient(180deg, #edf6f2 0%, #d3ece6 42%, #bcded8 100%);
+}
+
+[data-style-mode="calm"] body::before {
+  background:
+    radial-gradient(circle at 50% 24%, rgba(255,255,255,0.8), rgba(255,255,255,0) 26%),
+    linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0));
+  opacity: 1;
+}
+
+[data-style-mode="calm"] body::after {
+  background:
+    radial-gradient(circle at 12% 72%, rgba(136, 173, 148, 0.24), rgba(136, 173, 148, 0) 18%),
+    radial-gradient(circle at 88% 74%, rgba(136, 173, 148, 0.24), rgba(136, 173, 148, 0) 18%),
+    linear-gradient(180deg, transparent 0 76%, rgba(111, 159, 167, 0.32) 76% 100%);
+  opacity: 1;
+}
+
+[data-style-mode="calm"] .app {
+  max-width: 1320px;
+  margin: 20px auto;
+  min-height: calc(100vh - 40px);
+  background: rgba(240, 248, 243, 0.58);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(48, 71, 76, 0.12);
+  border-radius: 28px;
+  box-shadow: 0 24px 70px rgba(88, 124, 124, 0.18);
+}
+
+[data-style-mode="calm"] .topbar,
+[data-style-mode="calm"] .sidebar,
+[data-style-mode="calm"] .checkin-card,
+[data-style-mode="calm"] .week-grid-header,
+[data-style-mode="calm"] .week-grid-label,
+[data-style-mode="calm"] .cal-header,
+[data-style-mode="calm"] .stat-card,
+[data-style-mode="calm"] .modal,
+[data-style-mode="calm"] .day-hero,
+[data-style-mode="calm"] .hero-main,
+[data-style-mode="calm"] .focus-card,
+[data-style-mode="calm"] .review-card {
+  border: 1px solid rgba(53, 84, 79, 0.12);
+}
+
+[data-style-mode="calm"] .topbar,
+[data-style-mode="calm"] .sidebar {
+  background: rgba(235, 245, 239, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+[data-style-mode="calm"] .logo {
+  background: linear-gradient(135deg, #ef7d71, #f6b562);
+  color: #fffdf7;
+}
+
+[data-style-mode="calm"] .topbar-brand h1,
+[data-style-mode="calm"] .day-date,
+[data-style-mode="calm"] .section-title-row h2,
+[data-style-mode="calm"] .hero-title {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+[data-style-mode="calm"] .day-hero {
+  background:
+    radial-gradient(circle at top, rgba(255,255,255,0.65), rgba(255,255,255,0) 34%),
+    linear-gradient(180deg, rgba(222, 241, 236, 0.92), rgba(233, 244, 239, 0.92));
+}
+
+[data-style-mode="calm"] .day-hero::before,
+[data-style-mode="calm"] .day-hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 170px;
+  height: 160px;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(123, 162, 140, 0.26), rgba(123, 162, 140, 0) 22%),
+    linear-gradient(180deg, rgba(85, 112, 101, 0.12), rgba(85, 112, 101, 0.32));
+  clip-path: polygon(50% 0%, 64% 18%, 100% 100%, 0% 100%, 36% 18%);
+  opacity: 0.7;
+}
+
+[data-style-mode="calm"] .day-hero::before {
+  left: 36px;
+}
+
+[data-style-mode="calm"] .day-hero::after {
+  right: 36px;
+}
+
+[data-style-mode="calm"] .hero-main,
+[data-style-mode="calm"] .focus-card,
+[data-style-mode="calm"] .review-card {
+  background: rgba(255, 255, 255, 0.48);
+  box-shadow: 0 16px 35px rgba(103, 143, 136, 0.08);
+}
+
+[data-style-mode="calm"] .hero-stat,
+[data-style-mode="calm"] .meta-pill,
+[data-style-mode="calm"] .style-mode-btn.active,
+[data-style-mode="calm"] .theme-toggle,
+[data-style-mode="calm"] .view-tab.active {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+[data-style-mode="calm"] .hero-button.primary {
+  background: linear-gradient(135deg, #ef7d71, #f4a66a);
+}
+
+[data-style-mode="calm"] .hero-button.secondary {
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text-primary);
+}
+
+[data-style-mode="calm"] .style-mode-toggle {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) body {
+  background:
+    linear-gradient(124deg, #103c54 0 28%, #4a3528 28% 54%, #5f2f28 54% 76%, #243b2d 76% 100%);
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) body::before {
+  border-color: #f0e7d2;
+  background: linear-gradient(180deg, rgba(19, 18, 15, 0.95), rgba(19, 18, 15, 0.95));
+  box-shadow: 0 0 0 3px rgba(240, 231, 210, 0.14);
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) body::after {
+  background:
+    linear-gradient(90deg, transparent 0 84%, rgba(240, 231, 210, 0.08) 84% 86%, transparent 86%),
+    linear-gradient(180deg, transparent 0 78%, rgba(240, 231, 210, 0.08) 78% 80%, transparent 80%);
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) .app {
+  border-color: #e9dec7;
+  background: #13120f;
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.34);
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) .topbar,
+html[data-style-mode="studio"]:not([data-theme="light"]) .sidebar,
+html[data-style-mode="studio"]:not([data-theme="light"]) .content,
+html[data-style-mode="studio"]:not([data-theme="light"]) .week-grid-header,
+html[data-style-mode="studio"]:not([data-theme="light"]) .week-grid-label,
+html[data-style-mode="studio"]:not([data-theme="light"]) .cal-header,
+html[data-style-mode="studio"]:not([data-theme="light"]) .checkin-card,
+html[data-style-mode="studio"]:not([data-theme="light"]) .stat-card,
+html[data-style-mode="studio"]:not([data-theme="light"]) .modal {
+  background: #1a1814;
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) .topbar,
+html[data-style-mode="studio"]:not([data-theme="light"]) .sidebar,
+html[data-style-mode="studio"]:not([data-theme="light"]) .checkin-card,
+html[data-style-mode="studio"]:not([data-theme="light"]) .week-grid-header,
+html[data-style-mode="studio"]:not([data-theme="light"]) .week-grid-label,
+html[data-style-mode="studio"]:not([data-theme="light"]) .cal-header,
+html[data-style-mode="studio"]:not([data-theme="light"]) .stat-card,
+html[data-style-mode="studio"]:not([data-theme="light"]) .modal,
+html[data-style-mode="studio"]:not([data-theme="light"]) .day-hero,
+html[data-style-mode="studio"]:not([data-theme="light"]) .hero-main,
+html[data-style-mode="studio"]:not([data-theme="light"]) .focus-card,
+html[data-style-mode="studio"]:not([data-theme="light"]) .review-card,
+html[data-style-mode="studio"]:not([data-theme="light"]) .style-mode-toggle,
+html[data-style-mode="studio"]:not([data-theme="light"]) .hero-button.secondary,
+html[data-style-mode="studio"]:not([data-theme="light"]) .hero-stat,
+html[data-style-mode="studio"]:not([data-theme="light"]) .meta-pill,
+html[data-style-mode="studio"]:not([data-theme="light"]) .theme-toggle,
+html[data-style-mode="studio"]:not([data-theme="light"]) .view-tab.active,
+html[data-style-mode="studio"]:not([data-theme="light"]) .style-mode-btn.active {
+  border-color: #e9dec7;
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.28);
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) .day-hero {
+  background: #181612;
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) .day-hero::before {
+  border-color: rgba(233, 222, 199, 0.18);
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) .hero-main {
+  background: #e8a849;
+  color: #181612;
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) .hero-main .hero-copy,
+html[data-style-mode="studio"]:not([data-theme="light"]) .hero-main .hero-stat-label,
+html[data-style-mode="studio"]:not([data-theme="light"]) .hero-main .hero-kicker {
+  color: rgba(24, 22, 18, 0.78);
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) .focus-card {
+  background: #201d18;
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) .review-card:nth-child(1) {
+  background: #3a2338;
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) .review-card:nth-child(2) {
+  background: #2f2a1a;
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) .review-card:nth-child(3) {
+  background: #1f312b;
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) .hero-stat,
+html[data-style-mode="studio"]:not([data-theme="light"]) .meta-pill,
+html[data-style-mode="studio"]:not([data-theme="light"]) .theme-toggle,
+html[data-style-mode="studio"]:not([data-theme="light"]) .view-tab.active,
+html[data-style-mode="studio"]:not([data-theme="light"]) .style-mode-btn.active,
+html[data-style-mode="studio"]:not([data-theme="light"]) .hero-button.secondary,
+html[data-style-mode="studio"]:not([data-theme="light"]) .style-mode-toggle {
+  background: #201d18;
+}
+
+html[data-style-mode="studio"]:not([data-theme="light"]) .hero-button.primary,
+html[data-style-mode="studio"]:not([data-theme="light"]) .btn-add-habit,
+html[data-style-mode="studio"]:not([data-theme="light"]) .logo {
+  background: #f2c94c;
+  color: #161410;
+}
+
+html[data-style-mode="calm"]:not([data-theme="light"]) body {
+  background: linear-gradient(180deg, #091416 0%, #102224 42%, #142e2f 100%);
+}
+
+html[data-style-mode="calm"]:not([data-theme="light"]) body::before {
+  background:
+    radial-gradient(circle at 50% 24%, rgba(255,255,255,0.08), rgba(255,255,255,0) 26%),
+    linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
+}
+
+html[data-style-mode="calm"]:not([data-theme="light"]) body::after {
+  background:
+    radial-gradient(circle at 12% 72%, rgba(103, 153, 133, 0.16), rgba(103, 153, 133, 0) 18%),
+    radial-gradient(circle at 88% 74%, rgba(103, 153, 133, 0.16), rgba(103, 153, 133, 0) 18%),
+    linear-gradient(180deg, transparent 0 76%, rgba(53, 98, 102, 0.34) 76% 100%);
+}
+
+html[data-style-mode="calm"]:not([data-theme="light"]) .app {
+  background: rgba(11, 20, 21, 0.7);
+  border-color: rgba(219, 235, 229, 0.08);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+}
+
+html[data-style-mode="calm"]:not([data-theme="light"]) .topbar,
+html[data-style-mode="calm"]:not([data-theme="light"]) .sidebar {
+  background: rgba(17, 30, 31, 0.82);
+}
+
+html[data-style-mode="calm"]:not([data-theme="light"]) .day-hero {
+  background:
+    radial-gradient(circle at top, rgba(255,255,255,0.08), rgba(255,255,255,0) 34%),
+    linear-gradient(180deg, rgba(18, 34, 34, 0.94), rgba(14, 29, 29, 0.94));
+}
+
+html[data-style-mode="calm"]:not([data-theme="light"]) .hero-main,
+html[data-style-mode="calm"]:not([data-theme="light"]) .focus-card,
+html[data-style-mode="calm"]:not([data-theme="light"]) .review-card,
+html[data-style-mode="calm"]:not([data-theme="light"]) .checkin-card,
+html[data-style-mode="calm"]:not([data-theme="light"]) .stat-card,
+html[data-style-mode="calm"]:not([data-theme="light"]) .modal,
+html[data-style-mode="calm"]:not([data-theme="light"]) .week-grid-header,
+html[data-style-mode="calm"]:not([data-theme="light"]) .week-grid-label,
+html[data-style-mode="calm"]:not([data-theme="light"]) .cal-header {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(227, 240, 235, 0.08);
+  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.16);
+}
+
+html[data-style-mode="calm"]:not([data-theme="light"]) .hero-stat,
+html[data-style-mode="calm"]:not([data-theme="light"]) .meta-pill,
+html[data-style-mode="calm"]:not([data-theme="light"]) .style-mode-btn.active,
+html[data-style-mode="calm"]:not([data-theme="light"]) .theme-toggle,
+html[data-style-mode="calm"]:not([data-theme="light"]) .view-tab.active,
+html[data-style-mode="calm"]:not([data-theme="light"]) .hero-button.secondary,
+html[data-style-mode="calm"]:not([data-theme="light"]) .style-mode-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(227, 240, 235, 0.1);
 }
 
 /* ═══════════════════════════════════════════
@@ -508,15 +1193,17 @@ input, textarea, select {
 .checkin-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-width: 680px;
-  margin: 0 auto;
+  gap: 12px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
 .checkin-card {
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
+  width: 100%;
   padding: 14px 18px;
   transition: all var(--transition-normal);
   position: relative;
@@ -1214,6 +1901,15 @@ input, textarea, select {
    RESPONSIVE
    ═══════════════════════════════════════════ */
 @media (max-width: 768px) {
+  body::before {
+    inset: 10px;
+  }
+
+  .app {
+    margin: 10px;
+    min-height: calc(100vh - 20px);
+  }
+
   .sidebar {
     position: fixed;
     left: 0;
@@ -1239,6 +1935,35 @@ input, textarea, select {
 
   .content { padding: 14px; }
 
+  .topbar {
+    flex-wrap: wrap;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .style-mode-toggle {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .style-mode-btn {
+    flex: 1;
+    text-align: center;
+  }
+
+  .day-hero {
+    padding: 18px;
+  }
+
+  .day-hero-grid,
+  .review-grid,
+  .hero-stats {
+    grid-template-columns: 1fr;
+  }
+
   .week-grid {
     grid-template-columns: 70px repeat(7, 1fr);
   }
@@ -1251,10 +1976,24 @@ input, textarea, select {
 }
 
 @media (max-width: 480px) {
+  .app {
+    margin: 0;
+    border-radius: 0;
+    min-height: 100vh;
+  }
+
+  body::before,
+  body::after {
+    display: none;
+  }
+
   .topbar-brand h1 { display: none; }
   .view-tabs { gap: 0; }
   .view-tab { padding: 5px 6px; font-size: 0.68rem; }
   .topbar { gap: 8px; }
+  .hero-title {
+    font-size: 1.8rem;
+  }
 }
 
 /* Scrollbar */
@@ -1285,6 +2024,10 @@ input, textarea, select {
     </nav>
 
     <div class="topbar-actions">
+      <div class="style-mode-toggle" id="styleModeToggle" title="Switch UI style">
+        <button class="style-mode-btn active" type="button" data-style-mode="studio">Studio</button>
+        <button class="style-mode-btn" type="button" data-style-mode="calm">Calm</button>
+      </div>
       <div class="theme-toggle" id="themeToggle" title="Toggle light/dark theme">
         <div class="theme-toggle-icons">
           <span>🌙</span>
@@ -1367,6 +2110,7 @@ input, textarea, select {
 const STORAGE_KEY = 'ember_habits';
 const RECORDS_KEY = 'ember_records';
 const THEME_KEY = 'ember_theme';
+const STYLE_MODE_KEY = 'ember_style_mode';
 const API_BASE_URL = (
   document.querySelector('meta[name="api-base-url"]')?.content?.trim() ||
   ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -1494,6 +2238,23 @@ function initTheme() {
   }
 }
 
+function updateStyleModeUI(mode) {
+  document.querySelectorAll('.style-mode-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.styleMode === mode);
+  });
+}
+
+function setStyleMode(mode, persist = true) {
+  const nextMode = mode === 'calm' ? 'calm' : 'studio';
+  document.documentElement.setAttribute('data-style-mode', nextMode);
+  updateStyleModeUI(nextMode);
+  if (persist) localStorage.setItem(STYLE_MODE_KEY, nextMode);
+}
+
+function initStyleMode() {
+  setStyleMode(localStorage.getItem(STYLE_MODE_KEY) || 'studio', false);
+}
+
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'light' ? 'dark' : 'light';
@@ -1507,6 +2268,7 @@ function toggleTheme() {
 }
 
 initTheme();
+initStyleMode();
 
 /* ═══════════════════════════════════════════
    UTILITIES
@@ -1636,8 +2398,141 @@ function renderHabitList() {
     const streak = getStreak(h.id);
     const color = h.color || CATEGORY_COLORS[h.category] || '#888';
     const sel = state.selectedHabit === h.id ? ' selected' : '';
-    return `<div class="habit-item${sel}" data-id="${h.id}"><div class="habit-dot" style="background:${color}"></div><div class="habit-info"><div class="habit-name">${h.emoji||''} ${esc(h.name)}</div><div class="habit-category">${h.category}</div></div>${streak>0?`<span class="habit-streak-badge">${streak}🔥</span>`:''}<button class="btn-delete" data-id="${h.id}" title="Delete">✕</button></div>`;
+    return `<div class="habit-item${sel}" data-id="${h.id}"><div class="habit-dot" style="background:${color}"></div><div class="habit-info"><div class="habit-name">${h.emoji||''} ${esc(h.name)}</div><div class="habit-category">${h.category}</div></div><div class="habit-meta">${streak>0?`<span class="habit-streak-badge">${streak}🔥</span>`:''}<button class="btn-delete" data-id="${h.id}" title="Delete">✕</button></div></div>`;
   }).join('');
+}
+
+function getTopHabit() {
+  if (state.habits.length === 0) return null;
+  const scored = state.habits
+    .map((habit) => ({
+      habit,
+      streak: getStreak(habit.id),
+      completions: Object.values(state.records).reduce((sum, day) => {
+        const rec = day[habit.id];
+        return sum + (rec && rec.status === 'done' ? 1 : 0);
+      }, 0),
+    }))
+    .sort((a, b) => (b.streak - a.streak) || (b.completions - a.completions));
+  return scored[0] || null;
+}
+
+function selectedOrTopHabit() {
+  return state.habits.find((habit) => habit.id === state.selectedHabit) || (getTopHabit() || {}).habit || state.habits[0] || null;
+}
+
+function getWeeklyDoneCount() {
+  let total = 0;
+  const today = new Date();
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(today);
+    day.setDate(day.getDate() - i);
+    total += completionsOn(day);
+  }
+  return total;
+}
+
+function getCompletionSummaryForHabit(habitId) {
+  let total = 0;
+  Object.values(state.records).forEach((day) => {
+    if (day[habitId] && day[habitId].status === 'done') total++;
+  });
+  return total;
+}
+
+function getRecentReflection() {
+  const keys = Object.keys(state.records).sort().reverse();
+  for (const key of keys) {
+    const day = state.records[key];
+    for (const habit of state.habits) {
+      const note = day[habit.id] && day[habit.id].note;
+      if (note && note.trim()) return note.trim();
+    }
+  }
+  return 'Leave a short note in any habit card and it will show up here as your reflection trail.';
+}
+
+function renderDayHero(date, pct, done, total) {
+  const focus = selectedOrTopHabit();
+  const topHabit = getTopHabit();
+  const focusColor = focus ? (focus.color || CATEGORY_COLORS[focus.category] || '#888') : 'var(--accent-teal)';
+  const focusStreak = focus ? getStreak(focus.id) : 0;
+  const weeklyDone = getWeeklyDoneCount();
+  const totalHabits = state.habits.length;
+  const reflection = getRecentReflection();
+  const focusCompletions = focus ? getCompletionSummaryForHabit(focus.id) : 0;
+  const styleMode = document.documentElement.getAttribute('data-style-mode') || 'studio';
+  const reflectionPreview = esc(reflection.length > 180 ? `${reflection.slice(0, 177)}...` : reflection);
+  const title = styleMode === 'calm' ? 'Where calm meets consistency.' : 'Habit control, but make it playful.';
+  const copy = styleMode === 'calm'
+    ? 'A quiet dashboard for small rituals, gentle progress, and a little breathing room every day.'
+    : 'A bold command board for streaks, focus sessions, and daily momentum. Everything important stays visible.';
+
+  return `
+    <section class="day-hero">
+      <div class="day-hero-grid">
+        <div class="hero-main">
+          <span class="hero-kicker">Daily rhythm</span>
+          <h2 class="hero-title">${title}</h2>
+          <p class="hero-copy">${copy}</p>
+          <div class="hero-actions">
+            <button class="hero-button primary" type="button" id="todayHeroBtn">Jump to today</button>
+            <button class="hero-button secondary" type="button" id="openHabitHeroBtn">Shape your ritual</button>
+          </div>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <div class="hero-stat-value">${done}/${total}</div>
+              <div class="hero-stat-label">Done today</div>
+            </div>
+            <div class="hero-stat">
+              <div class="hero-stat-value">${pct}%</div>
+              <div class="hero-stat-label">Daily score</div>
+            </div>
+            <div class="hero-stat">
+              <div class="hero-stat-value">${weeklyDone}</div>
+              <div class="hero-stat-label">Wins this week</div>
+            </div>
+          </div>
+        </div>
+        <div class="hero-side">
+          <article class="focus-card">
+            <span class="panel-label">Focus card</span>
+            <h3 class="focus-title">${focus ? `${focus.emoji || '✨'} ${esc(focus.name)}` : 'Pick your first habit'}</h3>
+            <p class="focus-copy">${focus ? `Locked to ${focus.category}. ${focusStreak > 0 ? `${focusStreak} day streak running strong.` : 'Fresh page, no pressure.'}` : 'Add a habit to unlock your focus panel and style-driven summaries.'}</p>
+            <div class="focus-meta">
+              <span class="meta-pill" style="background:${focus ? focusColor : 'rgba(91,181,162,0.18)'}; color:${focus ? '#1d1d1d' : 'var(--text-primary)'}">${focus ? focus.category : 'Starter mode'}</span>
+              <span class="meta-pill">${focusCompletions} total check-ins</span>
+              <span class="meta-pill">${fmtShort(date)}</span>
+            </div>
+          </article>
+          <article class="review-card">
+            <span class="review-label">Snapshot</span>
+            <h3>${topHabit ? `${topHabit.habit.emoji || '🔥'} ${esc(topHabit.habit.name)}` : 'No top habit yet'}</h3>
+            <p class="review-copy">${topHabit ? `Strongest momentum lives here with a ${topHabit.streak} day streak and ${topHabit.completions} total completions.` : 'Your strongest habit will show up here once you start checking things off.'}</p>
+          </article>
+        </div>
+      </div>
+    </section>
+    <section class="review-grid">
+      <article class="review-card">
+        <span class="review-label">Active habits</span>
+        <h3>Small system, real momentum.</h3>
+        <strong>${totalHabits}</strong>
+        <p class="review-copy">Keep the list focused so the daily board stays clear and inviting.</p>
+      </article>
+      <article class="review-card">
+        <span class="review-label">Weekly rate</span>
+        <h3>Consistency over intensity.</h3>
+        <strong>${completionRate(7)}%</strong>
+        <p class="review-copy">${motivation()}</p>
+      </article>
+      <article class="review-card">
+        <span class="review-label">Reflection</span>
+        <h3>What today feels like.</h3>
+        <p class="review-copy">${reflectionPreview}</p>
+      </article>
+    </section>
+  `;
 }
 
 /* ─── DAY VIEW ─── */
@@ -1647,10 +2542,38 @@ function renderDay() {
   const total = state.habits.length;
   const pct = total > 0 ? Math.round((done/total)*100) : 0;
 
-  content.innerHTML = `<div class="view"><div class="day-header"><div class="day-nav"><button class="day-nav-btn" id="prevDay">←</button><button class="day-nav-btn today-btn" id="todayBtn">Today</button><button class="day-nav-btn" id="nextDay">→</button></div><div class="day-date">${fmtDate(d)}</div><div class="day-progress"><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div><span class="progress-text">${done}/${total}</span></div></div><div class="motivation">${motivation()}</div>${state.habits.length===0?`<div class="empty-state"><div class="empty-icon">✨</div><h3>Begin your journey</h3><p>Add your first habit using the + button.</p></div>`:`<div class="checkin-list">${state.habits.map(h => checkinCard(h,d)).join('')}</div>`}</div>`;
+  content.innerHTML = `
+    <div class="view day-shell">
+      <div class="day-header">
+        <div class="day-nav">
+          <button class="day-nav-btn" id="prevDay">←</button>
+          <button class="day-nav-btn today-btn" id="todayBtn">Today</button>
+          <button class="day-nav-btn" id="nextDay">→</button>
+        </div>
+        <div class="day-date">${fmtDate(d)}</div>
+        <div class="day-progress">
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <span class="progress-text">${done}/${total}</span>
+        </div>
+      </div>
+      ${renderDayHero(d, pct, done, total)}
+      <section>
+        <div class="section-title-row">
+          <div>
+            <h2>Daily check-ins</h2>
+            <p>${state.habits.length === 0 ? 'Start with one tiny ritual.' : 'Mark progress, leave notes, and keep the streak alive.'}</p>
+          </div>
+        </div>
+      </section>
+      ${state.habits.length===0
+        ? `<div class="empty-state"><div class="empty-icon">✨</div><h3>Begin your journey</h3><p>Add your first habit using the + button.</p></div>`
+        : `<div class="checkin-list">${state.habits.map(h => checkinCard(h,d)).join('')}</div>`}
+    </div>`;
 
   bindNav('prevDay','nextDay','todayBtn', () => { d.setDate(d.getDate()-1); }, () => { d.setDate(d.getDate()+1); });
   document.getElementById('todayBtn').onclick = () => { state.selectedDate = new Date(); render(); };
+  document.getElementById('todayHeroBtn').onclick = () => { state.selectedDate = new Date(); render(); };
+  document.getElementById('openHabitHeroBtn').onclick = openAddHabit;
   attachCheckinListeners(d);
 }
 
@@ -1999,6 +2922,13 @@ document.getElementById('addHabitBtn').addEventListener('click', openAddHabit);
 
 // Theme toggle
 document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+document.getElementById('styleModeToggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('.style-mode-btn');
+  if (!btn) return;
+  setStyleMode(btn.dataset.styleMode);
+  render();
+});
 
 // Settings (reset)
 document.getElementById('settingsBtn').addEventListener('click', async () => {

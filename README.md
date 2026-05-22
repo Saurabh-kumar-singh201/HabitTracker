@@ -3,7 +3,7 @@
 Simple Habit Tracker app split into:
 
 - `frontend/` for the Vercel static site
-- `backend/` for the Render Express API backed by MySQL
+- `backend/` for the Render Express API backed by MongoDB
 
 ## Run locally
 
@@ -14,7 +14,7 @@ cd backend
 npm install
 ```
 
-2. Create `backend/.env` from `backend/.env.example` and set your MySQL credentials.
+2. Create `backend/.env` and set your MongoDB connection values.
 
 3. Start the backend:
 
@@ -31,18 +31,16 @@ The API will be available at `http://localhost:3000`.
 
 Required for persistence:
 
-- `MYSQL_HOST`
-- `MYSQL_PORT`
-- `MYSQL_USER`
-- `MYSQL_PASSWORD`
-- `MYSQL_DATABASE`
+- `MONGODB_URI`
 
 Optional:
 
+- `MONGODB_DATABASE`
+- `MONGODB_COLLECTION`
 - `FRONTEND_ORIGIN`
 - `PORT`
 
-If MySQL is not configured, the UI can still load, but API persistence will not work.
+If MongoDB is not configured, the UI can still load, but API persistence will not work.
 
 ## Vercel + Render deployment
 
@@ -61,11 +59,9 @@ This project is now set up for a split deployment:
 4. Use these settings:
 
 ```env
-MYSQL_HOST=...
-MYSQL_PORT=3306
-MYSQL_USER=...
-MYSQL_PASSWORD=...
-MYSQL_DATABASE=habit_tracker
+MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>/<dbname>?retryWrites=true&w=majority
+MONGODB_DATABASE=habit_tracker
+MONGODB_COLLECTION=app_state
 FRONTEND_ORIGIN=https://your-vercel-app.vercel.app
 PORT=10000
 ```
@@ -73,13 +69,13 @@ PORT=10000
 5. Render can run the app with `npm start`.
 6. After deploy, note your backend URL, for example `https://habit-tracker-api.onrender.com`.
 
-### 2. Provide MySQL for Render
+### 2. Provide MongoDB for Render
 
-This app uses MySQL, not Postgres.
+This app now uses MongoDB for persistence.
 
-If you want to keep everything on Render, deploy MySQL there as a separate private service and connect your backend web service to it. Render’s current docs describe MySQL deployment as a Docker-based private service with a persistent disk and an internal address such as `mysql:3306`.
+The easiest option is MongoDB Atlas. Create a free cluster, create a database user, allow access from your backend, then copy the connection string into `MONGODB_URI`.
 
-If you already have a MySQL provider elsewhere, you can use that instead and set the same `MYSQL_*` variables in Render.
+If you already have another MongoDB provider, use that connection string instead and set the same `MONGODB_*` variables in Render.
 
 ### 3. Point the Vercel frontend at Render
 

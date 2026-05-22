@@ -1,25 +1,18 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import mysql from 'mysql2/promise';
+import { MongoClient } from 'mongodb';
 
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const preferredPort = Number(process.env.PORT || 3000);
 const allowedOrigins = (process.env.FRONTEND_ORIGIN || '')
   .split(',')
   .map(origin => origin.trim())
   .filter(Boolean);
-const dbConfig = {
-  host: process.env.MYSQL_HOST,
-  port: Number(process.env.MYSQL_PORT || 3306),
-  user: process.env.MYSQL_USER,
-  password: process.env.MYSQL_PASSWORD,
-  database: process.env.MYSQL_DATABASE || 'habit_tracker',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-};
+const mongoUri = process.env.MONGODB_URI || '';
+const mongoDatabaseName = process.env.MONGODB_DATABASE || 'habit_tracker';
+const mongoCollectionName = process.env.MONGODB_COLLECTION || 'app_state';
 const singletonId = 'habit-tracker-state';
 
 function isOriginAllowed(requestOrigin) {
@@ -59,36 +52,40 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '1mb' }));
 
 let pool;
-let schemaReady;
+let databaseReady;
 
-async function getPool() {
-  if (!dbConfig.host || !dbConfig.user) return null;
+async function getDatabase() {
+  if (!mongoUri) return null;
   if (!pool) {
-    pool = mysql.createPool(dbConfig);
+    const client = new MongoClient(mongoUri);
+    await client.connect();
+    pool = client.db(mongoDatabaseName);
   }
   return pool;
 }
 
-async function getSchemaReady() {
-  if (!schemaReady) {
-    schemaReady = ensureSchema().catch(error => {
-      schemaReady = null;
+async function getDatabaseReady() {
+  if (!databaseReady) {
+    databaseReady = ensureDatabase().catch(error => {
+      databaseReady = null;
       throw error;
     });
   }
-  return schemaReady;
+  return databaseReady;
 }
 
 async function readState() {
-  const dbPool = await getSchemaReady();
-  if (!dbPool) return null;
+  const collection = await getDatabaseReady();
+  if (!collection) return null;
   try {
-    const [rows] = await dbPool.query('SELECT habits_json, records_json, theme FROM app_state WHERE state_id = ? LIMIT 1', [singletonId]);
-    if (!Array.isArray(rows) || rows.length === 0) return null;
-    const row = rows[0];
+    const row = await collection.findOne(
+      { state_id: singletonId },
+      { projection: { _id: 0, habits: 1, records: 1, theme: 1 } }
+    );
+    if (!row) return null;
     return {
-      habits: safeParseJson(row.habits_json, []),
-      records: safeParseJson(row.records_json, {}),
+      habits: safeParseJson(row.habits, []),
+      records: safeParseJson(row.records, {}),
       theme: row.theme || 'dark',
     };
   } catch (error) {
@@ -99,7 +96,6 @@ async function readState() {
 
 function safeParseJson(value, fallback) {
   try {
-    // MySQL JSON columns return already-parsed objects, not strings
     if (typeof value === 'object' && value !== null) {
       return value;
     }
@@ -112,44 +108,35 @@ function safeParseJson(value, fallback) {
   }
 }
 
-async function ensureSchema() {
-  const dbPool = await getPool();
-  if (!dbPool) return null;
+async function ensureDatabase() {
+  const db = await getDatabase();
+  if (!db) return null;
   try {
-    await dbPool.query(`
-      CREATE TABLE IF NOT EXISTS app_state (
-        state_id VARCHAR(64) PRIMARY KEY,
-        habits_json JSON NOT NULL,
-        records_json JSON NOT NULL,
-        theme VARCHAR(16) NOT NULL DEFAULT 'dark',
-        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      )
-    `);
-    return dbPool;
+    const collection = db.collection(mongoCollectionName);
+    await collection.createIndex({ state_id: 1 }, { unique: true });
+    return collection;
   } catch (error) {
-    console.error('[ensureSchema] Error:', error.message);
+    console.error('[ensureDatabase] Error:', error.message);
     throw error;
   }
 }
 
 async function upsertState({ habits, records, theme }) {
-  const dbPool = await getSchemaReady();
-  if (!dbPool) return null;
+  const collection = await getDatabaseReady();
+  if (!collection) return null;
   try {
-    const habitJson = JSON.stringify(habits || []);
-    const recordJson = JSON.stringify(records || {});
     const themeVal = theme === 'light' ? 'light' : 'dark';
-    await dbPool.query(
-      `
-        INSERT INTO app_state (state_id, habits_json, records_json, theme, updated_at)
-        VALUES (?, ?, ?, ?, NOW())
-        ON DUPLICATE KEY UPDATE
-          habits_json = VALUES(habits_json),
-          records_json = VALUES(records_json),
-          theme = VALUES(theme),
-          updated_at = NOW()
-      `,
-      [singletonId, habitJson, recordJson, themeVal]
+    await collection.updateOne(
+      { state_id: singletonId },
+      {
+        $set: {
+          habits: Array.isArray(habits) ? habits : [],
+          records: records && typeof records === 'object' ? records : {},
+          theme: themeVal,
+          updated_at: new Date(),
+        },
+      },
+      { upsert: true }
     );
   } catch (error) {
     console.error('[upsertState] Error:', error.message);
@@ -171,14 +158,14 @@ app.get('/api/state', async (_req, res) => {
     const state = await readState();
     res.json(state ? { habits: state.habits || [], records: state.records || {}, theme: state.theme || 'dark' } : { habits: [], records: {}, theme: 'dark' });
   } catch (error) {
-    res.status(503).json({ error: 'MySQL is not available', details: error.message });
+    res.status(503).json({ error: 'MongoDB is not available', details: error.message });
   }
 });
 
 app.put('/api/state', async (req, res) => {
   try {
-    const dbPool = await getPool();
-    if (!dbPool) return res.status(503).json({ error: 'MySQL is not configured' });
+    const db = await getDatabase();
+    if (!db) return res.status(503).json({ error: 'MongoDB is not configured' });
     await upsertState({
       habits: Array.isArray(req.body?.habits) ? req.body.habits : [],
       records: req.body?.records && typeof req.body.records === 'object' ? req.body.records : {},
@@ -192,8 +179,8 @@ app.put('/api/state', async (req, res) => {
 
 app.patch('/api/state', async (req, res) => {
   try {
-    const dbPool = await getPool();
-    if (!dbPool) return res.status(503).json({ error: 'MySQL is not configured' });
+    const db = await getDatabase();
+    if (!db) return res.status(503).json({ error: 'MongoDB is not configured' });
     await patchState(req.body || {});
     res.json({ ok: true });
   } catch (error) {
@@ -203,10 +190,9 @@ app.patch('/api/state', async (req, res) => {
 
 app.delete('/api/state', async (_req, res) => {
   try {
-    const dbPool = await getPool();
-    if (!dbPool) return res.status(503).json({ error: 'MySQL is not configured' });
-    await getSchemaReady();
-    await dbPool.query('DELETE FROM app_state WHERE state_id = ?', [singletonId]);
+    const collection = await getDatabaseReady();
+    if (!collection) return res.status(503).json({ error: 'MongoDB is not configured' });
+    await collection.deleteOne({ state_id: singletonId });
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to reset state', details: error.message });
@@ -215,11 +201,11 @@ app.delete('/api/state', async (_req, res) => {
 
 app.get('/health', async (_req, res) => {
   try {
-    const dbPool = await getSchemaReady();
-    if (!dbPool) {
+    const db = await getDatabase();
+    if (!db) {
       return res.json({ ok: true, database: 'not-configured' });
     }
-    await dbPool.query('SELECT 1');
+    await db.command({ ping: 1 });
     res.json({ ok: true, database: 'connected' });
   } catch (error) {
     res.status(503).json({ ok: false, database: 'error', details: error.message });
@@ -230,14 +216,29 @@ app.get('/', (_req, res) => {
   res.json({ ok: true, service: 'habit-tracker-api' });
 });
 
-app.listen(port, () => {
-  console.log(`Habit Tracker API listening on http://localhost:${port}`);
-});
+function startServer(port) {
+  const server = app.listen(port, () => {
+    console.log(`Habit Tracker API listening on http://localhost:${port}`);
+  });
 
-getSchemaReady()
+  server.on('error', error => {
+    if (error.code === 'EADDRINUSE' && !process.env.PORT) {
+      console.warn(`Port ${port} is already in use. Trying ${port + 1}...`);
+      startServer(port + 1);
+      return;
+    }
+
+    console.error(`[server] Failed to start: ${error.message}`);
+    process.exit(1);
+  });
+}
+
+startServer(preferredPort);
+
+getDatabaseReady()
   .then(() => {
-    console.log('Database schema is ready');
+    console.log('Database connection is ready');
   })
   .catch(error => {
-    console.error('[startup] Failed to initialize database schema:', error.message);
+    console.error('[startup] Failed to initialize database connection:', error.message);
   });
