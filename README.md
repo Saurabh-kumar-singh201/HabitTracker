@@ -32,11 +32,13 @@ The API will be available at `http://localhost:3000`.
 Required for persistence:
 
 - `MONGODB_URI`
+- `AUTH_SECRET`
 
 Optional:
 
 - `MONGODB_DATABASE`
 - `MONGODB_COLLECTION`
+- `MONGODB_USERS_COLLECTION`
 - `FRONTEND_ORIGIN`
 - `PORT`
 
@@ -62,6 +64,8 @@ This project is now set up for a split deployment:
 MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>/<dbname>?retryWrites=true&w=majority
 MONGODB_DATABASE=habit_tracker
 MONGODB_COLLECTION=app_state
+MONGODB_USERS_COLLECTION=users
+AUTH_SECRET=use-a-long-random-secret
 FRONTEND_ORIGIN=https://your-vercel-app.vercel.app
 PORT=10000
 ```
@@ -92,6 +96,10 @@ Before deploying the frontend, change it to your Render backend URL:
 ```
 
 The app will then call `https://habit-tracker-api.onrender.com/api/state`.
+
+### User accounts
+
+This app now requires signup/login. Each user gets a separate MongoDB-backed habit state, so habits do not leak across different people using the public Vercel URL.
 
 ### 4. Deploy the frontend to Vercel
 
