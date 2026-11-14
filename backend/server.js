@@ -18,8 +18,20 @@ const userCollectionName = process.env.MONGODB_USERS_COLLECTION || 'users';
 const authSecret = process.env.AUTH_SECRET || 'habit-tracker-dev-secret-change-me';
 const tokenTtlDays = Number(process.env.AUTH_TOKEN_TTL_DAYS || 30);
 
+function isDevelopmentOrigin(requestOrigin) {
+  if (process.env.NODE_ENV === 'production') return false;
+  if (requestOrigin === 'null') return true;
+  try {
+    const { hostname } = new URL(requestOrigin);
+    return hostname === 'localhost' || hostname === '127.0.0.1';
+  } catch {
+    return false;
+  }
+}
+
 function isOriginAllowed(requestOrigin) {
   if (!requestOrigin) return false;
+  if (isDevelopmentOrigin(requestOrigin)) return true;
 
   return allowedOrigins.some(allowedOrigin => {
     if (allowedOrigin === requestOrigin) return true;
